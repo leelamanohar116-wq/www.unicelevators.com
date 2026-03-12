@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Unic Elevators</title>
+<!-- Fonts: load from Google if online, fallback to system fonts if offline (ACode/local) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+<style>
+  /* Safe font fallbacks so app looks good even without internet */
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+  body { font-family: 'DM Sans', 'Segoe UI', Arial, sans-serif; }
+  h1,h2,h3,.topbar-title,.tid,.sn,
+  [style*="Barlow Condensed"] { font-family: 'Barlow Condensed', 'Arial Narrow', Arial, sans-serif !important; }
+</style>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --red: #8B0000; --red-light: #a50000;
+  --navy: #1a1f2e;
+  --amber: #f59e0b; --blue: #3b82f6; --green: #22c55e;
+  --bg: #f4f4f4; --card: #ffffff;
+  --text: #1a1f2e; --muted: #6b7280; --border: #e5e7eb;
+}
+html, body { height: 100%; background: var(--navy); font-family: 'DM Sans', 'Segoe UI', Arial, sans-serif; color: var(--text); }
+#app { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; background: var(--navy); }
+.screen { width: 100%; max-width: 480px; min-height: 100vh; background: var(--bg); }
+
+/* Animations */
+@keyframes fadeUp   { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+@keyframes ping     { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.7);opacity:.3} }
+@keyframes checkPop { 0%{transform:scale(0) rotate(-20deg);opacity:0} 70%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+.fu  { animation: fadeUp .36s ease both; }
+.fu2 { animation: fadeUp .36s .08s ease both; }
+.fu3 { animation: fadeUp .36s .16s ease both; }
+.pdot { animation: ping 1.8s infinite; }
+
+/* Top bar */
+.topbar { background: var(--navy); color: #fff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+.topbar-title { font-family: 'Barlow Condensed',sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+.back-btn { background: rgba(255,255,255,.13); border: none; color: #fff; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: 'DM Sans',sans-serif; }
+.back-btn:active { opacity: .7; }
+.logout-btn { background: var(--red); border: none; color: #fff; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: 'DM Sans',sans-serif; }
+
+/* Buttons */
+.btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all .17s; font-family: 'DM Sans',sans-serif; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.btn:active { transform: scale(.97); }
+.btn-red    { background: var(--red);   color: #fff; }
+.btn-red:hover { background: var(--red-light); }
+.btn-navy   { background: var(--navy);  color: #fff; }
+.btn-navy:hover { background: #252b3d; }
+.btn-white  { background: #fff; color: var(--navy); border: 2px solid var(--border); }
+.btn-white:hover { border-color: var(--navy); }
+.btn-blue   { background: var(--blue);  color: #fff; }
+.btn-green  { background: var(--green); color: #fff; }
+.btn-outline{ background: transparent; color: var(--red); border: 2px solid var(--red); }
+
+/* Inputs */
+.ig { margin-bottom: 14px; }
+.il { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; display: block; }
+.if { width: 100%; padding: 13px 14px; border: 2px solid var(--border); border-radius: 10px; font-size: 15px; font-family: 'DM Sans',sans-serif; color: var(--text); background: #fff; transition: border-color .2s; }
+.if:focus { outline: none; border-color: var(--red); }
+textarea.if { resize: vertical; min-height: 80px; }
+select.if { appearance: none; cursor: pointer; }
+
+/* Cards */
+.card { background: var(--card); border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.07); border: 1px solid var(--border); }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.bp  { background: #fef3c7; color: #92400e; }
+.bi  { background: #dbeafe; color: #1d4ed8; }
+.bc  { background: #dcfce7; color: #166534; }
+.bem { background: #fee2e2; color: #991b1b; }
+.bmo { background: #f3e8ff; color: #6b21a8; }
+.bin { background: #e0f2fe; color: #0369a1; }
+
+/* Pills */
+.pill-row { display: flex; gap: 8px; overflow-x: auto; padding: 0 18px 12px; -ms-overflow-style: none; scrollbar-width: none; }
+.pill-row::-webkit-scrollbar { display: none; }
+.pill    { padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: all .14s; font-family: 'DM Sans',sans-serif; white-space: nowrap; flex-shrink: 0; }
+.pon  { background: var(--navy); color: #fff; }
+.poff { background: #fff; color: var(--muted); border-color: var(--border); }
+
+/* Stats */
+.sg { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.sc { background: var(--card); border-radius: 12px; padding: 14px; text-align: center; border: 1px solid var(--border); }
+.sn { font-family: 'Barlow Condensed',sans-serif; font-size: 34px; font-weight: 800; }
+.sl { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 600; letter-spacing: .5px; margin-top: 2px; }
+
+/* Tabs */
+.tab-bar { display: flex; background: #fff; border-bottom: 1px solid var(--border); overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; }
+.tab-bar::-webkit-scrollbar { display: none; }
+.tab  { padding: 13px 14px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; border-bottom: 3px solid transparent; color: var(--muted); font-family: 'DM Sans',sans-serif; transition: all .14s; flex-shrink: 0; }
+.ton  { border-bottom-color: var(--red); color: var(--red); }
+
+/* Misc */
+.ct      { padding: 18px; }
+.stitle  { font-family: 'Barlow Condensed',sans-serif; font-size: 14px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; margin-top: 20px; }
+.div     { height: 1px; background: var(--border); margin: 14px 0; }
+.emsg    { color: #ef4444; font-size: 13px; margin-top: 6px; }
+.tid     { font-family: 'Barlow Condensed',sans-serif; font-size: 26px; font-weight: 800; color: var(--red); }
+.pl      { color: var(--blue); text-decoration: none; font-weight: 600; }
+.ml      { display: inline-flex; align-items: center; gap: 6px; background: #e8f5e9; color: #2e7d32; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; margin-top: 8px; }
+.svcs    { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.so      { padding: 10px 4px; border: 2px solid var(--border); border-radius: 10px; text-align: center; cursor: pointer; font-size: 11px; font-weight: 600; color: var(--muted); transition: all .14s; background: #fff; font-family: 'DM Sans',sans-serif; line-height: 1.3; }
+.so.on   { border-color: var(--red); background: #fff0f0; color: var(--red); }
+.pin-w   { display: flex; justify-content: center; }
+.pin-i   { width: 160px; text-align: center; font-size: 28px; letter-spacing: 10px; padding: 12px; }
+.ir      { display: flex; justify-content: space-between; align-items: flex-start; padding: 5px 0; border-bottom: 1px solid #f3f4f6; gap: 10px; }
+.ik      { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.iv      { font-size: 13px; font-weight: 500; text-align: right; word-break: break-word; }
+.empty   { text-align: center; padding: 48px 20px; color: var(--muted); }
+.empty i { font-size: 48px; display: block; margin-bottom: 12px; }
+.empty h3{ font-family: 'Barlow Condensed',sans-serif; font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.empty p { font-size: 13px; line-height: 1.5; }
+.bc-wrap { display: flex; align-items: flex-end; gap: 6px; height: 80px; margin-top: 8px; }
+.bc-col  { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bc-bar  { width: 100%; border-radius: 4px 4px 0 0; }
+.bc-lbl  { font-size: 9px; color: var(--muted); font-weight: 600; }
+.gw      { display: flex; flex-direction: column; align-items: center; margin: 8px 0; }
+
+/* Language screen */
+.ls { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--navy); padding: 40px 24px; }
+.lb { width: 100%; max-width: 280px; padding: 18px; border-radius: 14px; font-size: 18px; font-weight: 700; cursor: pointer; transition: all .17s; font-family: 'DM Sans',sans-serif; margin-bottom: 14px; border: 2px solid transparent; }
+.lb:active { transform: scale(.97); }
+</style>
+</head>
+<body>
+<div id="app"><div class="screen" id="S"></div></div>
+<script>
+'use strict';
+
+// ─── SECURE STORAGE ───────────────────────────────
+const _CK = 'UnicElev@2024#SecureKey!XY';
+function enc(d){try{const s=JSON.stringify(d);let r='';for(let i=0;i<s.length;i++)r+=String.fromCharCode(s.charCodeAt(i)^_CK.charCodeAt(i%_CK.length));return btoa(unescape(encodeURIComponent(r)));}catch(e){return null;}}
+function dec(raw){try{const s=decodeURIComponent(escape(atob(raw)));let r='';for(let i=0;i<s.length;i++)r+=String.fromCharCode(s.charCodeAt(i)^_CK.charCodeAt(i%_CK.length));return JSON.parse(r);}catch(e){return null;}}
+// In-memory fallback if localStorage is blocked (ACode / private mode / file://)
+const _MEM = {};
+function lsGet(k,fb){
+  try{
+    if(typeof localStorage==='undefined') return _MEM[k]||fb;
+    const v=localStorage.getItem(k);
+    return v?(dec(v)||fb):fb;
+  }catch(e){return _MEM[k]||fb;}
+}
+function lsSet(k,d){
+  _MEM[k]=d; // always keep in memory too
+  try{
+    if(typeof localStorage==='undefined') return;
+    const e=enc(d);if(e)localStorage.setItem(k,e);
+  }catch(e){}
+}
+
+// ─── STORE ────────────────────────────────────────
+const STORE = {
+  tickets:  lsGet('__ue_t__', []),
+  sessions: lsGet('__ue_s__', []),
+
+  addTicket(t)       { this.tickets.unshift(t); lsSet('__ue_t__',this.tickets); },
+  updateStatus(id,s) {
+    if (!['pending','in-progress','completed'].includes(s)) return;
+    const t=this.tickets.find(x=>x.id===id);
+    if(t){t.status=s;t.updatedAt=Date.now();lsSet('__ue_t__',this.tickets);}
+  },
+  addSession(s)      { this.sessions.unshift(s); lsSet('__ue_s__',this.sessions); },
+  logoutSess(id)     {
+    const s=this.sessions.find(x=>x.id===id);
+    if(s&&!s.logoutTime){s.logoutTime=Date.now();lsSet('__ue_s__',this.sessions);}
+  },
+  nextId() {
+    const max=this.tickets.reduce((m,t)=>Math.max(m,parseInt((t.id||'').replace('UE-',''))||0),0);
+    return 'UE-'+String(max+1).padStart(5,'0');
+  }
+};
+
+// ─── APP STATE ────────────────────────────────────
+let LANG    = 'en';
+let SCR     = 'language';
+let STACK   = [];
+let DATA    = {};
+let TECH    = null;   // active tech session
+let ADMIN   = null;   // active admin session
+let POLL    = null;
+
+// ─── TRANSLATIONS ─────────────────────────────────
+const TR = {
+  en:{
+    unic:'UNIC ELEVATORS',lt:'Select Language',eng:'English',tel:'తెలుగు',
+    rt:'Select Role',cust:'Customer',tech:'Technician',adm:'Admin',
+    cm:'Customer',rs:'Request Service',ts:'Track Status',
+    bk:'← Back',lo:'Logout',
+    rqt:'REQUEST SERVICE',svct:'Service Type',
+    fn:'Full Name',ph:'Phone Number',bl:'Building / Address',
+    iss:'Describe the Issue',cl:'📍 Capture Live Location',
+    lc:'✅ Location Captured',lf:'Fetching location…',
+    ld:'Location access denied.',ln:'Geolocation not supported.',
+    sr:'Send Request',erq:'Please fill all required fields and select a service type.',
+    eph:'Enter a valid 10-digit phone number.',
+    sent:'Request Submitted!',yti:'Your Ticket ID',
+    trk:'Track →',dn:'Done',
+    trt:'Track Status',sp:'Ticket ID or Mobile Number',
+    tn:'Track Now',nf:'No ticket found. Check the ID or phone.',
+    tl:'Tech Login',tnm:'Your Name',ep:'Enter PIN',
+    sl:'Secure Login',wp:'Incorrect PIN. Please try again.',nr:'Please enter your name.',
+    fo:'FIELD OPS',AL:'ALL',PD:'PENDING',IP:'IN PROGRESS',CP:'COMPLETED',
+    jd:'Job Detail',ci:'Customer Info',sd:'Service Details',
+    mip:'▶ Mark In Progress',mc:'✓ Mark Completed',jc:'JOB COMPLETED ✅',
+    om:'📍 Open in Google Maps',nc:'Not captured',
+    al:'Admin Login',ap:'Admin PIN',lb:'Login',
+    ap2:'ADMIN PANEL',ov:'Overview',at:'All Tickets',
+    tss:'Tech Sessions',an:'Analytics',
+    tot:'Total',pnd:'Pending',inp:'In Progress',
+    cmp:'Completed',em:'Emergency',tod:'Today',
+    act:'ACTIVE TECHNICIANS',wc:'Tickets This Week',
+    ra:'Recent Activity',cr:'Completion Rate',
+    sd2:'Service Type Distribution',ss:'Summary Stats',
+    ts2:"Today's Sessions",an2:'Active Now',
+    ns:'No technician sessions yet.',nt:'No tickets yet.',
+    et:'No Tickets Yet',es:'Waiting for customer requests…',
+  },
+  te:{
+    unic:'యూనిక్ ఎలివేటర్స్',lt:'భాష ఎంచుకోండి',eng:'English',tel:'తెలుగు',
+    rt:'పాత్ర ఎంచుకోండి',cust:'కస్టమర్',tech:'టెక్నీషియన్',adm:'అడ్మిన్',
+    cm:'కస్టమర్',rs:'సేవ అభ్యర్థించండి',ts:'స్థితి ట్రాక్',
+    bk:'← వెనుకకు',lo:'లాగ్అవుట్',
+    rqt:'సేవ అభ్యర్థన',svct:'సేవ రకం',
+    fn:'పూర్తి పేరు',ph:'ఫోన్ నంబర్',bl:'భవనం / చిరునామా',
+    iss:'సమస్య వివరించండి',cl:'📍 లైవ్ లొకేషన్',
+    lc:'✅ లొకేషన్ తీసుకున్నారు',lf:'లొకేషన్ తీసుకుంటున్నారు…',
+    ld:'లొకేషన్ అనుమతి లేదు.',ln:'జియోలొకేషన్ అందుబాటులో లేదు.',
+    sr:'అభ్యర్థన పంపండి',erq:'అన్ని ఫీల్డ్లు పూరించండి.',
+    eph:'10-అంకెల నంబర్ నమోదు చేయండి.',
+    sent:'అభ్యర్థన సమర్పించబడింది!',yti:'మీ టికెట్ ID',
+    trk:'ట్రాక్ →',dn:'పూర్తయింది',
+    trt:'స్థితి ట్రాక్',sp:'టికెట్ ID లేదా మొబైల్ నంబర్',
+    tn:'ట్రాక్ చేయండి',nf:'టికెట్ కనుగొనబడలేదు.',
+    tl:'టెక్ లాగిన్',tnm:'మీ పేరు',ep:'పిన్ నమోదు',
+    sl:'సురక్షిత లాగిన్',wp:'తప్పు పిన్.',nr:'మీ పేరు నమోదు చేయండి.',
+    fo:'ఫీల్డ్ ఆప్స్',AL:'అన్నీ',PD:'పెండింగ్',IP:'పురోగతి',CP:'పూర్తి',
+    jd:'పని వివరాలు',ci:'కస్టమర్ సమాచారం',sd:'సేవ వివరాలు',
+    mip:'▶ పురోగతిలో గుర్తించు',mc:'✓ పూర్తయిందిగా గుర్తించు',jc:'పని పూర్తయింది ✅',
+    om:'📍 Google Maps లో తెరవండి',nc:'తీసుకోలేదు',
+    al:'అడ్మిన్ లాగిన్',ap:'అడ్మిన్ పిన్',lb:'లాగిన్',
+    ap2:'అడ్మిన్ పానెల్',ov:'అవలోకనం',at:'అన్ని టికెట్లు',
+    tss:'టెక్ సెషన్లు',an:'విశ్లేషణలు',
+    tot:'మొత్తం',pnd:'పెండింగ్',inp:'పురోగతి',
+    cmp:'పూర్తి',em:'అత్యవసరం',tod:'ఈరోజు',
+    act:'యాక్టివ్ టెక్నీషియన్లు',wc:'ఈవారం టికెట్లు',
+    ra:'తాజా కార్యకలాపాలు',cr:'పూర్తి రేటు',
+    sd2:'సేవ రకాల పంపిణీ',ss:'సారాంశ గణాంకాలు',
+    ts2:'ఈరోజు సెషన్లు',an2:'ఇప్పుడు యాక్టివ్',
+    ns:'సెషన్లు లేవు.',nt:'టికెట్లు లేవు.',
+    et:'టికెట్లు లేవు',es:'అభ్యర్థనల కోసం వేచి ఉంది…',
+  }
+};
+const t = k => (TR[LANG]||TR.en)[k] || k;
+
+// ─── HELPERS ──────────────────────────────────────
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function ago(ts){if(!ts)return'—';const d=Date.now()-ts;if(d<60000)return'Just now';if(d<3600000)return Math.floor(d/60000)+'m ago';if(d<86400000)return Math.floor(d/3600000)+'h ago';return Math.floor(d/86400000)+'d ago';}
+function fmt(ts){if(!ts)return'—';return new Date(ts).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});}
+function dur(a,b){const m=Math.floor(((b||Date.now())-a)/60000);if(m<1)return'< 1 min';if(m<60)return m+' min';return Math.floor(m/60)+'h '+(m%60)+'m';}
+function si(s){return{pending:['bp','⏳ Pending'],'in-progress':['bi','🔧 In Progress'],completed:['bc','✅ Completed']}[s]||['bp',s];}
+function tb(tp){return{'Emergency Repair':'bem','Monthly Service':'bmo','New Installation':'bin'}[tp]||'bp';}
+function IR(k,v){return`<div class="ir"><span class="ik">${k}</span><span class="iv">${v}</span></div>`;}
+function topbar(title,back){return`<div class="topbar">${back?`<button class="back-btn" id="BK">${t('bk')}</button>`:'<div style="width:64px"></div>'}<span class="topbar-title">${title}</span><div style="width:64px"></div></div>`;}
+
+// ─── ROUTER ───────────────────────────────────────
+function go(scr, data={}, push=true){
+  if(push) STACK.push({s:SCR,d:{...DATA}});
+  SCR=scr; DATA=data;
+  stopPoll(); render();
+}
+function goBack(){
+  if(!STACK.length) return;
+  const p=STACK.pop(); SCR=p.s; DATA=p.d||{};
+  stopPoll(); render();
+}
+
+// ─── RENDER ───────────────────────────────────────
+function render(){
+  document.getElementById('S').innerHTML = build();
+  bind();
+  if(SCR==='techDashboard')  startTechPoll();
+  if(SCR==='adminDashboard') startAdminPoll();
+}
+
+// Partial update (no flicker)
+function partialTech(){
+  const pr=document.getElementById('PR'), tl=document.getElementById('TL');
+  if(pr){pr.innerHTML=buildPills(); bindPills();}
+  if(tl){tl.innerHTML=buildList();  bindCards();}
+}
+function partialAdmin(){
+  const el=document.getElementById('AC');
+  if(el){el.innerHTML=buildAdminTab(DATA.tab||'overview'); bindAdminCt();}
+}
+
+function build(){
+  if(SCR==='language')       return sLang();
+  if(SCR==='role')           return sRole();
+  if(SCR==='customerMenu')   return sCust();
+  if(SCR==='requestService') return sReq();
+  if(SCR==='ticketSuccess')  return sSuccess();
+  if(SCR==='trackStatus')    return sTrack();
+  if(SCR==='techLogin')      return sTechLogin();
+  if(SCR==='techDashboard')  return sTechDash();
+  if(SCR==='jobDetail')      return sJob();
+  if(SCR==='adminLogin')     return sAdminLogin();
+  if(SCR==='adminDashboard') return sAdminDash();
+  return sLang();
+}
+
+// ─── SCREENS ──────────────────────────────────────
+function sLang(){
+  return`<div class="ls fu">
+    <div style="width:80px;height:80px;background:var(--red);border-radius:18px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:44px;font-weight:800;color:#fff;margin-bottom:16px;">U</div>
+    <h1 style="font-size:28px;font-weight:800;color:#fff;letter-spacing:2px;margin-bottom:4px;">${t('unic')}</h1>
+    <p style="color:#9ca3af;font-size:12px;margin-bottom:40px;letter-spacing:1.5px;">ELEVATOR MANAGEMENT SYSTEM</p>
+    <p style="color:#d1d5db;font-size:14px;margin-bottom:18px;font-weight:500;">${t('lt')}</p>
+    <button class="lb fu2" id="LEN" style="background:var(--red);color:#fff;">🇬🇧 ${t('eng')}</button>
+    <button class="lb fu3" id="LTE" style="background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.2);">🇮🇳 ${t('tel')}</button>
+  </div>`;
+}
+function sRole(){
+  return`${topbar(t('unic'),true)}
+  <div class="ct fu">
+    <h2 style="font-size:30px;font-weight:800;margin:10px 0 24px;">${t('rt')}</h2>
+    <button class="btn btn-navy fu2" id="RC" style="margin-bottom:12px;"><span style="font-size:22px;">👤</span>${t('cust')}</button>
+    <button class="btn btn-white fu2" id="RT" style="margin-bottom:12px;"><span style="font-size:22px;">🔧</span>${t('tech')}</button>
+    <button class="btn fu3" id="RA" style="background:transparent;color:#9ca3af;border:2px solid var(--border);font-size:14px;"><span style="font-size:16px;">🛡️</span>${t('adm')}</button>
+  </div>`;
+}
+function sCust(){
+  return`${topbar(t('cm'),true)}
+  <div class="ct fu">
+    <h2 style="font-size:30px;font-weight:800;margin:10px 0 24px;">${t('cm')}</h2>
+    <button class="btn btn-red fu2" id="CRS" style="margin-bottom:12px;"><span style="font-size:22px;">🛡️</span>${t('rs')}</button>
+    <button class="btn btn-white fu3" id="CTS"><span style="font-size:22px;">🔍</span>${t('ts')}</button>
+  </div>`;
+}
+function sReq(){
+  const svcs=['Emergency Repair','Monthly Service','New Installation'];
+  const sel=DATA.serviceType||'', loc=DATA.location||null;
+  return`${topbar(t('rqt'),true)}
+  <div class="ct fu">
+    <p class="stitle" style="margin-top:0;">${t('svct')} *</p>
+    <div class="svcs">
+      ${svcs.map(s=>`<button class="so${sel===s?' on':''}" data-sv="${esc(s)}">${s}</button>`).join('')}
+    </div>
+    <div class="ig"><label class="il">${t('fn')} *</label><input class="if" id="NM" type="text" placeholder="e.g. Ravi Kumar" value="${esc(DATA.name||'')}" autocomplete="name"/></div>
+    <div class="ig"><label class="il">${t('ph')} *</label><input class="if" id="PH" type="tel" placeholder="10-digit mobile" value="${esc(DATA.phone||'')}" maxlength="10" inputmode="numeric"/></div>
+    <div class="ig"><label class="il">${t('bl')} *</label><input class="if" id="BD" type="text" placeholder="e.g. Sunrise Apartments, Hyderabad" value="${esc(DATA.building||'')}"/></div>
+    <div class="ig"><label class="il">${t('iss')}</label><textarea class="if" id="IS" placeholder="Describe the problem…">${esc(DATA.issue||'')}</textarea></div>
+    <button class="btn btn-white" id="LC" style="margin-bottom:8px;">
+      ${loc?`<span style="color:var(--green)">✅</span> ${t('lc')} (${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)})`:t('cl')}
+    </button>
+    <div id="LM" style="font-size:13px;margin-bottom:8px;"></div>
+    <div id="FE" class="emsg" style="margin-bottom:10px;"></div>
+    <button class="btn btn-red" id="SB">${t('sr')}</button>
+  </div>`;
+}
+function sSuccess(){
+  const tk=DATA.ticket||{};
+  return`${topbar(t('sent'),false)}
+  <div class="ct" style="text-align:center;padding-top:32px;">
+    <div style="animation:checkPop .5s ease both;font-size:72px;margin-bottom:12px;">✅</div>
+    <p style="color:var(--green);font-weight:700;font-size:16px;margin-bottom:6px;">${t('sent')}</p>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">${t('yti')}</p>
+    <div class="tid" style="font-size:38px;margin-bottom:24px;">${esc(tk.id)}</div>
+    <div class="card" style="text-align:left;">
+      ${IR('Name',esc(tk.name))}
+      ${IR('Phone',esc(tk.phone))}
+      ${IR('Building',esc(tk.building))}
+      ${IR('Type',`<span class="badge ${tb(tk.type)}">${esc(tk.type)}</span>`)}
+      ${IR('Location',tk.location?'📍 Captured':t('nc'))}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;">
+      <button class="btn btn-outline" id="GT">${t('trk')}</button>
+      <button class="btn btn-red" id="DN">${t('dn')}</button>
+    </div>
+  </div>`;
+}
+function sTrack(){
+  const res=DATA.result, srch=DATA.searched;
+  return`${topbar(t('trt'),true)}
+  <div class="ct fu">
+    <h2 style="font-size:28px;font-weight:800;margin:10px 0 20px;">${t('trt')}</h2>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <input class="if" id="SQ" type="text" placeholder="${t('sp')}" value="${esc(DATA.query||'')}" style="flex:1;"/>
+      <button class="btn btn-red" id="SBT" style="width:auto;padding:0 18px;flex-shrink:0;">${t('tn')}</button>
+    </div>
+    ${srch&&!res?`<div class="card" style="text-align:center;color:var(--muted);padding:20px;">${t('nf')}</div>`:''}
+    ${res?ticketCard(res):''}
+  </div>`;
+}
+function ticketCard(tk){
+  const steps=['Received','Assigned','Completed'];
+  const si2=tk.status==='pending'?0:tk.status==='in-progress'?1:2;
+  const[bc2,bl2]=si(tk.status);
+  return`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span class="tid">${esc(tk.id)}</span><span class="badge ${bc2}">${bl2}</span>
+    </div>
+    <div style="display:flex;align-items:center;padding:12px;background:#f9fafb;border-radius:10px;margin-bottom:14px;">
+      ${steps.map((s,i)=>`
+        <div style="display:flex;align-items:center;flex:1;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:${i<=si2?'var(--green)':'var(--border)'};color:${i<=si2?'#fff':'var(--muted)'};">${i<si2?'✓':i+1}</div>
+            <span style="font-size:9px;font-weight:700;color:${i<=si2?'var(--green)':'var(--muted)'};">${s}</span>
+          </div>
+          ${i<2?`<div style="flex:1;height:3px;background:${i<si2?'var(--green)':'var(--border)'};margin:0 4px;margin-bottom:14px;"></div>`:''}
+        </div>`).join('')}
+    </div>
+    ${IR('Name',esc(tk.name))}${IR('Phone',esc(tk.phone))}${IR('Building',esc(tk.building))}
+    ${IR('Service',esc(tk.type))}${IR('Issue',esc(tk.issue))}${IR('Raised',ago(tk.createdAt))}
+  </div>`;
+}
+function sTechLogin(){
+  return`${topbar(t('tl'),true)}
+  <div class="ct fu">
+    <h2 style="font-size:30px;font-weight:800;margin:10px 0 24px;">${t('tl')}</h2>
+    <div class="ig"><label class="il">${t('tnm')} *</label><input class="if" id="TN" type="text" placeholder="e.g. Arjun Reddy" autocomplete="name"/></div>
+    <div class="ig"><label class="il">${t('ep')} *</label><div class="pin-w"><input class="if pin-i" id="TP" type="password" maxlength="4" placeholder="••••" inputmode="numeric" autocomplete="off"/></div></div>
+    <div id="TE" class="emsg" style="margin-bottom:10px;text-align:center;"></div>
+    <button class="btn btn-red" id="TLB" style="margin-top:8px;">${t('sl')}</button>
+  </div>`;
+}
+function buildPills(){
+  const f=DATA.filter||'ALL';
+  const cnt={ALL:STORE.tickets.length,PENDING:STORE.tickets.filter(x=>x.status==='pending').length,'IN-PROGRESS':STORE.tickets.filter(x=>x.status==='in-progress').length,COMPLETED:STORE.tickets.filter(x=>x.status==='completed').length};
+  return['ALL','PENDING','IN-PROGRESS','COMPLETED'].map(k=>`<button class="pill ${f===k?'pon':'poff'}" data-pf="${k}">${t(k==='ALL'?'AL':k==='PENDING'?'PD':k==='IN-PROGRESS'?'IP':'CP')} (${cnt[k]})</button>`).join('');
+}
+function buildList(){
+  const f=DATA.filter||'ALL';
+  const list=STORE.tickets.filter(x=>f==='ALL'||(f==='PENDING'&&x.status==='pending')||(f==='IN-PROGRESS'&&x.status==='in-progress')||(f==='COMPLETED'&&x.status==='completed'));
+  if(!list.length) return`<div class="empty"><i>📋</i><h3>${t('et')}</h3><p>${t('es')}</p></div>`;
+  return list.map(tk=>{
+    const[bc2,bl2]=si(tk.status);
+    return`<div class="card" data-tid="${esc(tk.id)}" style="cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:6px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--red);">${esc(tk.id)}</span>
+          <span class="badge ${tb(tk.type)}" style="font-size:10px;">${esc(tk.type)}</span>
+        </div>
+        <span class="badge ${bc2}">${bl2}</span>
+      </div>
+      <div style="font-weight:600;font-size:15px;margin-bottom:3px;">${esc(tk.name)}</div>
+      <a href="tel:${esc(tk.phone)}" class="pl" onclick="event.stopPropagation()">📞 ${esc(tk.phone)}</a>
+      <div style="font-size:13px;color:var(--muted);margin-top:3px;">${esc(tk.building)}</div>
+      <div style="font-size:13px;margin-top:4px;">${esc(tk.issue.substring(0,70))}${tk.issue.length>70?'…':''}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+        <span style="font-size:12px;color:var(--muted);">${ago(tk.createdAt)}</span>
+        ${tk.location?`<span style="font-size:11px;color:var(--blue);">📍 Location</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function sTechDash(){
+  return`<div style="position:sticky;top:0;z-index:200;background:var(--navy);">
+    <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:#fff;letter-spacing:1px;">${t('fo')}</div>
+        <div style="font-size:12px;color:#9ca3af;">👤 ${esc(TECH?.techName||'Technician')}</div>
+      </div>
+      <button class="logout-btn" id="TLO">${t('lo')}</button>
+    </div>
+    <div class="pill-row" id="PR">${buildPills()}</div>
+  </div>
+  <div class="ct" id="TL">${buildList()}</div>`;
+}
+function sJob(){
+  const tk=DATA.ticket?STORE.tickets.find(x=>x.id===DATA.ticket.id)||DATA.ticket:null;
+  if(!tk) return`${topbar(t('jd'),true)}<div class="ct"><p>Ticket not found.</p></div>`;
+  const[bc2,bl2]=si(tk.status);
+  return`${topbar(t('jd'),true)}
+  <div class="ct fu">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span class="tid">${esc(tk.id)}</span><span class="badge ${bc2}">${bl2}</span>
+    </div>
+    <div class="card">
+      <p class="stitle" style="margin-top:0;">${t('ci')}</p>
+      ${IR('Name',esc(tk.name))}
+      ${IR('Phone',`<a href="tel:${esc(tk.phone)}" class="pl">📞 ${esc(tk.phone)}</a>`)}
+      ${IR('Building',esc(tk.building))}
+      <div class="div"></div>
+      <p class="stitle">${t('sd')}</p>
+      ${IR('Type',`<span class="badge ${tb(tk.type)}">${esc(tk.type)}</span>`)}
+      ${IR('Issue',esc(tk.issue))}
+      ${IR('Submitted',fmt(tk.createdAt))}
+      ${tk.location
+        ?`<div class="div"></div><p class="stitle">Location</p>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:6px;">Lat: ${tk.location.lat.toFixed(5)}, Lng: ${tk.location.lng.toFixed(5)}</p>
+          <a href="https://maps.google.com?q=${tk.location.lat},${tk.location.lng}" target="_blank" class="ml">${t('om')}</a>`
+        :IR('Location',t('nc'))
+      }
+    </div>
+    <div id="JA" style="margin-top:16px;">
+      ${tk.status==='pending'?`<button class="btn btn-blue" id="MIP">${t('mip')}</button>`:''}
+      ${tk.status==='in-progress'?`<button class="btn btn-green" id="MCP">${t('mc')}</button>`:''}
+      ${tk.status==='completed'?`<div style="text-align:center;padding:24px;font-size:20px;font-weight:700;color:var(--green);">${t('jc')}</div>`:''}
+    </div>
+  </div>`;
+}
+function sAdminLogin(){
+  return`${topbar(t('al'),true)}
+  <div class="ct fu">
+    <h2 style="font-size:30px;font-weight:800;margin:10px 0 24px;">${t('al')}</h2>
+    <div class="ig"><label class="il">Admin Name *</label><input class="if" id="AN" type="text" placeholder="e.g. Srinivas Murthy" autocomplete="name"/></div>
+    <div class="ig"><label class="il">${t('ap')} *</label><div class="pin-w"><input class="if pin-i" id="AP" type="password" maxlength="4" placeholder="••••" inputmode="numeric" autocomplete="off"/></div></div>
+    <div id="AE" class="emsg" style="margin-bottom:10px;text-align:center;"></div>
+    <button class="btn btn-navy" id="ALB" style="margin-top:8px;">${t('lb')}</button>
+  </div>`;
+}
+function sAdminDash(){
+  const tab=DATA.tab||'overview';
+  return`<div style="position:sticky;top:0;z-index:200;background:var(--navy);">
+    <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:#fff;letter-spacing:1px;">${t('ap2')}</div>
+        <div style="font-size:12px;color:#9ca3af;">🛡️ ${esc(ADMIN?.name||'Admin')}</div>
+      </div>
+      <button class="logout-btn" id="ALO">${t('lo')}</button>
+    </div>
+    <div class="tab-bar">
+      ${[['overview',t('ov')],['tickets',t('at')],['sessions',t('tss')],['analytics',t('an')]].map(([k,v])=>
+        `<div class="tab${tab===k?' ton':''}" data-at="${k}">${v}</div>`
+      ).join('')}
+    </div>
+  </div>
+  <div class="ct" id="AC">${buildAdminTab(tab)}</div>`;
+}
+function buildAdminTab(tab){
+  if(tab==='overview')  return aOverview();
+  if(tab==='tickets')   return aTickets();
+  if(tab==='sessions')  return aSessions();
+  if(tab==='analytics') return aAnalytics();
+  return '';
+}
+function aOverview(){
+  const all=STORE.tickets, tod=all.filter(x=>Date.now()-x.createdAt<86400000);
+  const pnd=all.filter(x=>x.status==='pending'), inp=all.filter(x=>x.status==='in-progress');
+  const done=all.filter(x=>x.status==='completed'), emg=all.filter(x=>x.type==='Emergency Repair');
+  const act=STORE.sessions.filter(s=>!s.logoutTime);
+  const days=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const l=d.toLocaleDateString('en-IN',{weekday:'short'});const c=all.filter(x=>{const td=new Date(x.createdAt);return td.toDateString()===d.toDateString();}).length;days.push({l,c});}
+  const mx=Math.max(...days.map(d=>d.c),1);
+  return`
+  <div class="sg">
+    ${[[all.length,t('tot'),'var(--navy)'],[pnd.length,t('pnd'),'var(--amber)'],[inp.length,t('inp'),'var(--blue)'],[done.length,t('cmp'),'var(--green)'],[emg.length,t('em'),'var(--red)'],[tod.length,t('tod'),'var(--navy)']].map(([n,l,c])=>`<div class="sc"><div class="sn" style="color:${c};">${n}</div><div class="sl">${l}</div></div>`).join('')}
+  </div>
+  ${act.length?`<div class="card" style="background:#f0fdf4;border-color:#bbf7d0;margin-bottom:16px;">
+    <p style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px;">🟢 ${t('act')} (${act.length})</p>
+    ${act.map(s=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #dcfce7;"><span style="font-weight:600;font-size:14px;">👤 ${esc(s.techName)}</span><span style="font-size:12px;color:var(--muted);">Since ${fmt(s.loginTime)}</span></div>`).join('')}
+  </div>`:''}
+  <p class="stitle">${t('wc')}</p>
+  <div class="card"><div class="bc-wrap">${days.map(d=>`<div class="bc-col"><div class="bc-bar" style="height:${Math.max(4,(d.c/mx)*64)}px;background:var(--red);"></div><div class="bc-lbl">${d.l}</div><div class="bc-lbl">${d.c}</div></div>`).join('')}</div></div>
+  <p class="stitle">${t('ra')}</p>
+  ${!all.length?`<div class="card" style="text-align:center;color:var(--muted);padding:20px;">${t('nt')}</div>`:all.slice(0,5).map(tk=>{const[bc2,bl2]=si(tk.status);return`<div class="card" style="padding:12px;"><div style="display:flex;justify-content:space-between;"><span style="font-weight:600;font-size:14px;">${esc(tk.name)}</span><span class="badge ${bc2}" style="font-size:10px;">${bl2}</span></div><div style="font-size:12px;color:var(--muted);margin-top:2px;">${esc(tk.id)} · ${ago(tk.createdAt)}</div></div>`;}).join('')}`;
+}
+function aTickets(){
+  if(!STORE.tickets.length) return`<div class="empty"><i>📋</i><h3>${t('nt')}</h3></div>`;
+  return STORE.tickets.map(tk=>{
+    const[bc2,bl2]=si(tk.status);
+    return`<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:6px;flex-wrap:wrap;">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--red);">${esc(tk.id)}</span>
+        <span class="badge ${tb(tk.type)}">${esc(tk.type)}</span>
+      </div>
+      ${IR('Customer',esc(tk.name))}${IR('Phone',esc(tk.phone))}${IR('Building',esc(tk.building))}
+      ${IR('Issue',esc(tk.issue.substring(0,90))+(tk.issue.length>90?'…':''))}
+      ${IR('Submitted',fmt(tk.createdAt))}
+      ${tk.location?IR('Location','📍 Captured'):''}
+      <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:12px;font-weight:600;color:var(--muted);">Status:</span>
+        <select class="if" data-as="${esc(tk.id)}" style="flex:1;padding:6px 10px;font-size:13px;">
+          <option value="pending" ${tk.status==='pending'?'selected':''}>⏳ Pending</option>
+          <option value="in-progress" ${tk.status==='in-progress'?'selected':''}>🔧 In Progress</option>
+          <option value="completed" ${tk.status==='completed'?'selected':''}>✅ Completed</option>
+        </select>
+      </div>
+    </div>`;
+  }).join('');
+}
+function aSessions(){
+  const s=STORE.sessions, act=s.filter(x=>!x.logoutTime), tod=s.filter(x=>Date.now()-x.loginTime<86400000);
+  return`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+    <div class="sc"><div class="sn" style="color:var(--navy);font-size:28px;">${tod.length}</div><div class="sl">${t('ts2')}</div></div>
+    <div class="sc"><div class="sn" style="color:var(--green);font-size:28px;">${act.length}</div><div class="sl">${t('an2')}</div></div>
+  </div>
+  ${!s.length?`<div class="card" style="text-align:center;color:var(--muted);padding:20px;">${t('ns')}</div>`:
+    s.map(x=>`<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-weight:700;font-size:16px;">👤 ${esc(x.techName)}</div>
+        ${!x.logoutTime
+          ?`<span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--green);"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);" class="pdot"></span>Active</span>`
+          :`<span class="badge bc">Offline</span>`
+        }
+      </div>
+      ${IR('Login',fmt(x.loginTime))}${IR('Logout',x.logoutTime?fmt(x.logoutTime):'— Still Active')}${IR('Duration',dur(x.loginTime,x.logoutTime))}
+    </div>`).join('')
+  }`;
+}
+function aAnalytics(){
+  const all=STORE.tickets, done=all.filter(x=>x.status==='completed').length;
+  const rate=all.length?Math.round((done/all.length)*100):0;
+  const types=[{l:'Emergency Repair',c:all.filter(x=>x.type==='Emergency Repair').length,col:'var(--red)'},{l:'Monthly Service',c:all.filter(x=>x.type==='Monthly Service').length,col:'#7c3aed'},{l:'New Installation',c:all.filter(x=>x.type==='New Installation').length,col:'var(--blue)'}];
+  const mx=Math.max(...types.map(x=>x.c),1);
+  const circ=2*Math.PI*40, dash=(rate/100)*circ;
+  return`
+  <p class="stitle" style="margin-top:0;">${t('cr')}</p>
+  <div class="card"><div class="gw">
+    <svg width="120" height="120" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" stroke-width="10"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="var(--green)" stroke-width="10"
+        stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}"
+        stroke-dashoffset="${(circ/4).toFixed(1)}"
+        stroke-linecap="round" transform="rotate(-90 50 50)"/>
+      <text x="50" y="56" text-anchor="middle" font-family="Barlow Condensed" font-size="22" font-weight="800" fill="var(--navy)">${rate}%</text>
+    </svg>
+    <p style="font-size:13px;color:var(--muted);">${done} of ${all.length} tickets completed</p>
+  </div></div>
+  <p class="stitle">${t('sd2')}</p>
+  <div class="card">${types.map(tp=>`<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span style="font-weight:600;">${tp.l}</span><span style="color:var(--muted);">${tp.c}</span></div><div style="background:var(--border);border-radius:4px;height:10px;"><div style="background:${tp.col};height:10px;border-radius:4px;width:${(tp.c/mx)*100}%;"></div></div></div>`).join('')}</div>
+  <p class="stitle">${t('ss')}</p>
+  <div class="card">
+    ${IR('Total Tickets',all.length)}${IR('Pending',all.filter(x=>x.status==='pending').length)}
+    ${IR('In Progress',all.filter(x=>x.status==='in-progress').length)}${IR('Completed',done)}
+    ${IR('Total Sessions',STORE.sessions.length)}${IR('Active Now',STORE.sessions.filter(s=>!s.logoutTime).length)}
+  </div>`;
+}
+
+// ─── BIND EVENTS ──────────────────────────────────
+function bind(){
+  const $=id=>document.getElementById(id);
+  const on=(id,ev,fn)=>{const e=$(id);if(e)e.addEventListener(ev,fn);};
+
+  on('BK','click',goBack);
+
+  // Language
+  on('LEN','click',()=>{LANG='en';STACK=[];go('role',{},false);});
+  on('LTE','click',()=>{LANG='te';STACK=[];go('role',{},false);});
+
+  // Role
+  on('RC','click',()=>go('customerMenu'));
+  on('RT','click',()=>go('techLogin'));
+  on('RA','click',()=>go('adminLogin'));
+
+  // Customer menu
+  on('CRS','click',()=>go('requestService'));
+  on('CTS','click',()=>go('trackStatus'));
+
+  // Service type selector
+  document.querySelectorAll('[data-sv]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      DATA.serviceType=b.dataset.sv;
+      document.querySelectorAll('[data-sv]').forEach(x=>x.classList.toggle('on',x.dataset.sv===DATA.serviceType));
+    });
+  });
+
+  // Location
+  on('LC','click',()=>{
+    const m=$('LM');
+    if(!navigator.geolocation){if(m)m.innerHTML=`<span style="color:#ef4444;">${t('ln')}</span>`;return;}
+    if(m)m.innerHTML=`<span style="color:var(--muted);">${t('lf')}</span>`;
+    navigator.geolocation.getCurrentPosition(p=>{
+      DATA.location={lat:p.coords.latitude,lng:p.coords.longitude};
+      const b=$('LC');
+      if(b)b.innerHTML=`<span style="color:var(--green)">✅</span> ${t('lc')} (${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)})`;
+      if(m)m.innerHTML='';
+    },()=>{if(m)m.innerHTML=`<span style="color:#ef4444;">${t('ld')}</span>`;});
+  });
+
+  // Submit request
+  on('SB','click',()=>{
+    const nm=($('NM')?.value||'').trim();
+    const ph=($('PH')?.value||'').replace(/\D/g,'');
+    const bd=($('BD')?.value||'').trim();
+    const is=($('IS')?.value||'').trim();
+    const fe=$('FE');
+    if(!nm||!ph||!bd||!DATA.serviceType){if(fe)fe.textContent=t('erq');return;}
+    if(ph.length<10){if(fe)fe.textContent=t('eph');return;}
+    const tk={id:STORE.nextId(),type:DATA.serviceType,name:nm,phone:ph,building:bd,issue:is||'No description provided',status:'pending',location:DATA.location||null,createdAt:Date.now(),updatedAt:Date.now()};
+    STORE.addTicket(tk);
+    go('ticketSuccess',{ticket:tk});
+  });
+
+  // Ticket success
+  on('GT','click',()=>{const id=DATA.ticket?.id;go('trackStatus',{query:id,result:STORE.tickets.find(x=>x.id===id),searched:true});});
+  on('DN','click',()=>{STACK=[];go('language',{},false);});
+
+  // Track
+  on('SBT','click',()=>{
+    const q=($('SQ')?.value||'').trim();
+    if(!q)return;
+    const res=STORE.tickets.find(x=>x.id===q||x.phone===q);
+    DATA={query:q,result:res,searched:true};render();
+  });
+
+  // Tech login
+  on('TLB','click',()=>{
+    const nm=($('TN')?.value||'').trim(), pin=($('TP')?.value||'').trim(), e=$('TE');
+    if(!nm){if(e)e.textContent=t('nr');return;}
+    if(pin!=='1111'){if(e)e.textContent=t('wp');return;}
+    const sess={id:'S'+Date.now(),techName:nm,loginTime:Date.now(),logoutTime:null};
+    TECH=sess; STORE.addSession(sess);
+    STACK=[]; go('techDashboard',{filter:'ALL'},false);
+  });
+
+  // Tech dashboard
+  on('TLO','click',()=>{
+    if(TECH){STORE.logoutSess(TECH.id);TECH=null;}
+    stopPoll(); STACK=[]; go('language',{},false);
+  });
+  bindPills(); bindCards();
+
+  // Job detail
+  on('MIP','click',()=>{if(DATA.ticket){STORE.updateStatus(DATA.ticket.id,'in-progress');DATA.ticket.status='in-progress';render();}});
+  on('MCP','click',()=>{if(DATA.ticket){STORE.updateStatus(DATA.ticket.id,'completed');DATA.ticket.status='completed';render();}});
+
+  // Admin login
+  on('ALB','click',()=>{
+    const nm=($('AN')?.value||'').trim(), pin=($('AP')?.value||'').trim(), e=$('AE');
+    if(!nm){if(e)e.textContent=t('nr');return;}
+    if(pin!=='2222'){if(e)e.textContent=t('wp');return;}
+    ADMIN={name:nm,loginTime:Date.now()};
+    STACK=[]; go('adminDashboard',{tab:'overview'},false);
+  });
+
+  // Admin tabs
+  document.querySelectorAll('[data-at]').forEach(tab=>{
+    tab.addEventListener('click',()=>{DATA.tab=tab.dataset.at;render();});
+  });
+  on('ALO','click',()=>{ADMIN=null;stopPoll();STACK=[];go('language',{},false);});
+  bindAdminCt();
+}
+function bindPills(){
+  document.querySelectorAll('[data-pf]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      DATA.filter=b.dataset.pf;
+      const pr=document.getElementById('PR'), tl=document.getElementById('TL');
+      if(pr){pr.innerHTML=buildPills();bindPills();}
+      if(tl){tl.innerHTML=buildList();bindCards();}
+    });
+  });
+}
+function bindCards(){
+  document.querySelectorAll('[data-tid]').forEach(c=>{
+    c.addEventListener('click',()=>{
+      const tk=STORE.tickets.find(x=>x.id===c.dataset.tid);
+      if(tk)go('jobDetail',{ticket:tk});
+    });
+  });
+}
+function bindAdminCt(){
+  document.querySelectorAll('[data-as]').forEach(s=>{
+    s.addEventListener('change',()=>STORE.updateStatus(s.dataset.as,s.value));
+  });
+}
+
+// ─── SMART POLLING (no flicker) ───────────────────
+function startTechPoll(){
+  stopPoll();
+  POLL=setInterval(()=>{if(SCR==='techDashboard')partialTech();},1500);
+}
+function startAdminPoll(){
+  stopPoll();
+  POLL=setInterval(()=>{if(SCR==='adminDashboard')partialAdmin();},2000);
+}
+function stopPoll(){if(POLL){clearInterval(POLL);POLL=null;}}
+
+// ─── BOOT ─────────────────────────────────────────
+// Use DOMContentLoaded to guarantee DOM is ready in ALL environments
+// (ACode, file://, Netlify, Chrome, Firefox, Android WebView)
+function boot() {
+  try {
+    const el = document.getElementById('S');
+    if (!el) { setTimeout(boot, 50); return; } // retry if DOM not ready yet
+    render();
+  } catch(e) {
+    // If anything fails, show error so user knows what happened
+    document.body.innerHTML = '<div style="padding:30px;font-family:Arial;color:#8B0000;text-align:center;"><h2>Loading Error</h2><p style="margin-top:10px;font-size:14px;">'+e.message+'</p><button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#8B0000;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;">Retry</button></div>';
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot(); // DOM already ready
+}
+</script>
+</body>
+</html>
